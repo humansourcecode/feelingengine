@@ -1,0 +1,657 @@
+# Feeling Engine — Emotional Vocabulary v1
+#
+# 60 terms, each mapped to expected brain-region activation patterns.
+# These mappings are grounded in dimensional emotion theory and
+# established neuroscience literature on brain-emotion associations.
+#
+# Dimensions used:
+#   valence: positive (+1) to negative (-1)
+#   arousal: high (+1) to low (-1)
+#   body_focus: interoceptive (+1) to cognitive (-1)
+#
+# Brain region expectations (what TRIBE categories should look like):
+#   interoception: body-awareness, visceral sensing
+#   language: verbal/semantic processing
+#   core_affect: general emotional charge
+#   regulation: executive control, emotional management
+#   social: social cognition, theory of mind
+#   reward: motivation, pleasure, wanting
+#   memory: retrieval, recognition, familiarity
+#
+# Transition affinity: which transition types this term typically appears with
+#   onset, rapid_spike, gradual_rise, peak, plateau, decline, rapid_drop, reversal
+
+schema_version: 1
+
+terms:
+
+  # ─── Body-dominant emotions (high interoception) ───
+
+  vulnerability:
+    valence: -0.4
+    arousal: 0.5
+    body_focus: 0.8
+    brain_expectations:
+      interoception: high      # > 0.25
+      core_affect: moderate    # > 0.15
+      regulation: low          # < 0.15
+    transition_affinity: [onset, gradual_rise]
+
+  mortality_awareness:
+    valence: -0.6
+    arousal: 0.7
+    body_focus: 0.9
+    brain_expectations:
+      interoception: very_high  # > 0.35
+      language: negative        # < -0.05
+      core_affect: high         # > 0.25
+    transition_affinity: [rapid_spike, peak]
+
+  body_response:
+    valence: -0.2
+    arousal: 0.6
+    body_focus: 0.95
+    brain_expectations:
+      interoception: very_high
+      language: negative
+    transition_affinity: [peak, plateau]
+
+  gut_feeling:
+    valence: 0.0
+    arousal: 0.4
+    body_focus: 0.85
+    brain_expectations:
+      interoception: high
+      regulation: low
+    transition_affinity: [onset, rapid_spike]
+
+  physical_tension:
+    valence: -0.5
+    arousal: 0.7
+    body_focus: 0.8
+    brain_expectations:
+      interoception: high
+      regulation: high
+      core_affect: high
+    transition_affinity: [gradual_rise, plateau]
+
+  release:
+    valence: 0.3
+    arousal: -0.3
+    body_focus: 0.6
+    brain_expectations:
+      interoception: declining  # falling from high
+      core_affect: declining
+    transition_affinity: [decline, reversal]
+
+  # ─── Cognitive/verbal emotions (high language) ───
+
+  persuasion:
+    valence: 0.2
+    arousal: 0.4
+    body_focus: -0.6
+    brain_expectations:
+      language: high
+      social: moderate
+      regulation: moderate
+    transition_affinity: [gradual_rise, plateau]
+
+  argument:
+    valence: -0.1
+    arousal: 0.5
+    body_focus: -0.7
+    brain_expectations:
+      language: high
+      regulation: high
+      core_affect: moderate
+    transition_affinity: [onset, gradual_rise]
+
+  clarity:
+    valence: 0.4
+    arousal: 0.3
+    body_focus: -0.5
+    brain_expectations:
+      language: high
+      regulation: moderate
+      core_affect: low
+    transition_affinity: [peak, plateau]
+
+  confusion:
+    valence: -0.3
+    arousal: 0.4
+    body_focus: -0.3
+    brain_expectations:
+      language: moderate
+      regulation: high
+      core_affect: moderate
+    transition_affinity: [onset, gradual_rise]
+
+  realization:
+    valence: 0.3
+    arousal: 0.6
+    body_focus: 0.2
+    brain_expectations:
+      language: declining_then_rising  # drops then recovers
+      interoception: spike
+      core_affect: high
+    transition_affinity: [rapid_spike, reversal]
+
+  # ─── Social/interpersonal emotions ───
+
+  empathy:
+    valence: 0.1
+    arousal: 0.4
+    body_focus: 0.3
+    brain_expectations:
+      social: high
+      interoception: moderate
+      core_affect: moderate
+    transition_affinity: [gradual_rise, plateau]
+
+  connection:
+    valence: 0.6
+    arousal: 0.3
+    body_focus: 0.2
+    brain_expectations:
+      social: high
+      reward: moderate
+      core_affect: moderate
+    transition_affinity: [gradual_rise, plateau]
+
+  isolation:
+    valence: -0.5
+    arousal: -0.2
+    body_focus: 0.4
+    brain_expectations:
+      social: negative
+      interoception: moderate
+      reward: low
+    transition_affinity: [onset, plateau]
+
+  trust:
+    valence: 0.5
+    arousal: 0.1
+    body_focus: -0.1
+    brain_expectations:
+      social: high
+      regulation: low
+      reward: moderate
+    transition_affinity: [gradual_rise]
+
+  betrayal:
+    valence: -0.8
+    arousal: 0.7
+    body_focus: 0.5
+    brain_expectations:
+      social: declining
+      interoception: spike
+      core_affect: high
+    transition_affinity: [rapid_spike, reversal]
+
+  # ─── Reward/motivation emotions ───
+
+  desire:
+    valence: 0.4
+    arousal: 0.6
+    body_focus: 0.3
+    brain_expectations:
+      reward: high
+      core_affect: high
+      interoception: moderate
+    transition_affinity: [onset, gradual_rise]
+
+  satisfaction:
+    valence: 0.7
+    arousal: 0.1
+    body_focus: 0.2
+    brain_expectations:
+      reward: high
+      core_affect: moderate
+      regulation: low
+    transition_affinity: [peak, plateau]
+
+  anticipation:
+    valence: 0.3
+    arousal: 0.6
+    body_focus: 0.2
+    brain_expectations:
+      reward: high
+      core_affect: moderate
+      regulation: moderate
+    transition_affinity: [gradual_rise]
+
+  disappointment:
+    valence: -0.6
+    arousal: -0.2
+    body_focus: 0.3
+    brain_expectations:
+      reward: declining
+      core_affect: moderate
+      interoception: moderate
+    transition_affinity: [decline, rapid_drop]
+
+  longing:
+    valence: -0.2
+    arousal: 0.3
+    body_focus: 0.4
+    brain_expectations:
+      reward: moderate
+      memory: high
+      interoception: moderate
+    transition_affinity: [gradual_rise, plateau]
+
+  # ─── Memory/temporal emotions ───
+
+  nostalgia:
+    valence: 0.2
+    arousal: 0.2
+    body_focus: 0.3
+    brain_expectations:
+      memory: high
+      reward: moderate
+      core_affect: moderate
+    transition_affinity: [gradual_rise, plateau]
+
+  recognition:
+    valence: 0.3
+    arousal: 0.4
+    body_focus: -0.1
+    brain_expectations:
+      memory: high
+      language: moderate
+      reward: moderate
+    transition_affinity: [rapid_spike]
+
+  familiarity:
+    valence: 0.2
+    arousal: 0.0
+    body_focus: -0.2
+    brain_expectations:
+      memory: high
+      regulation: low
+    transition_affinity: [onset, plateau]
+
+  grief:
+    valence: -0.8
+    arousal: 0.3
+    body_focus: 0.7
+    brain_expectations:
+      memory: high
+      interoception: high
+      core_affect: high
+      social: moderate
+    transition_affinity: [gradual_rise, plateau, decline]
+
+  regret:
+    valence: -0.6
+    arousal: 0.3
+    body_focus: 0.4
+    brain_expectations:
+      memory: high
+      core_affect: moderate
+      regulation: moderate
+      interoception: moderate
+    transition_affinity: [gradual_rise]
+
+  # ─── Regulation/control emotions ───
+
+  composure:
+    valence: 0.2
+    arousal: -0.1
+    body_focus: -0.3
+    brain_expectations:
+      regulation: high
+      core_affect: low
+      interoception: low
+    transition_affinity: [plateau]
+
+  resolve:
+    valence: 0.4
+    arousal: 0.4
+    body_focus: 0.1
+    brain_expectations:
+      regulation: high
+      core_affect: moderate
+      reward: moderate
+    transition_affinity: [onset, gradual_rise]
+
+  restraint:
+    valence: -0.1
+    arousal: 0.3
+    body_focus: -0.2
+    brain_expectations:
+      regulation: high
+      core_affect: moderate
+      interoception: moderate
+    transition_affinity: [plateau]
+
+  surrender:
+    valence: -0.2
+    arousal: -0.4
+    body_focus: 0.5
+    brain_expectations:
+      regulation: declining
+      interoception: moderate
+      core_affect: declining
+    transition_affinity: [decline, rapid_drop]
+
+  defiance:
+    valence: -0.2
+    arousal: 0.7
+    body_focus: 0.3
+    brain_expectations:
+      regulation: high
+      core_affect: high
+      social: negative
+    transition_affinity: [rapid_spike, peak]
+
+  # ─── Complex/composite emotions ───
+
+  awe:
+    valence: 0.5
+    arousal: 0.7
+    body_focus: 0.6
+    brain_expectations:
+      interoception: high
+      core_affect: high
+      language: low
+      regulation: low
+    transition_affinity: [rapid_spike, peak]
+
+  wonder:
+    valence: 0.6
+    arousal: 0.5
+    body_focus: 0.2
+    brain_expectations:
+      core_affect: high
+      reward: moderate
+      language: moderate
+      memory: low
+    transition_affinity: [onset, gradual_rise]
+
+  dread:
+    valence: -0.8
+    arousal: 0.6
+    body_focus: 0.7
+    brain_expectations:
+      interoception: high
+      core_affect: high
+      regulation: moderate
+      reward: negative
+    transition_affinity: [gradual_rise]
+
+  hope:
+    valence: 0.5
+    arousal: 0.4
+    body_focus: 0.2
+    brain_expectations:
+      reward: high
+      core_affect: moderate
+      regulation: moderate
+    transition_affinity: [onset, gradual_rise]
+
+  despair:
+    valence: -0.9
+    arousal: -0.2
+    body_focus: 0.6
+    brain_expectations:
+      core_affect: high
+      interoception: high
+      reward: negative
+      regulation: low
+    transition_affinity: [decline, plateau]
+
+  tenderness:
+    valence: 0.6
+    arousal: 0.1
+    body_focus: 0.4
+    brain_expectations:
+      social: high
+      interoception: moderate
+      core_affect: moderate
+      regulation: low
+    transition_affinity: [gradual_rise, plateau]
+
+  bittersweet:
+    valence: 0.0
+    arousal: 0.3
+    body_focus: 0.5
+    brain_expectations:
+      memory: high
+      reward: moderate
+      interoception: moderate
+      core_affect: moderate
+    transition_affinity: [plateau]
+
+  indignation:
+    valence: -0.6
+    arousal: 0.7
+    body_focus: 0.3
+    brain_expectations:
+      core_affect: high
+      social: high
+      regulation: moderate
+      language: moderate
+    transition_affinity: [rapid_spike]
+
+  reverence:
+    valence: 0.5
+    arousal: 0.3
+    body_focus: 0.5
+    brain_expectations:
+      interoception: moderate
+      social: moderate
+      core_affect: moderate
+      regulation: moderate
+    transition_affinity: [gradual_rise, plateau]
+
+  shame:
+    valence: -0.7
+    arousal: 0.4
+    body_focus: 0.6
+    brain_expectations:
+      social: high
+      interoception: high
+      core_affect: high
+      regulation: moderate
+    transition_affinity: [rapid_spike, plateau]
+
+  pride:
+    valence: 0.6
+    arousal: 0.5
+    body_focus: 0.2
+    brain_expectations:
+      reward: high
+      social: moderate
+      core_affect: high
+    transition_affinity: [peak, plateau]
+
+  # ─── Transitional/liminal emotions ───
+
+  uncertainty:
+    valence: -0.3
+    arousal: 0.3
+    body_focus: 0.1
+    brain_expectations:
+      regulation: high
+      core_affect: moderate
+      language: moderate
+    transition_affinity: [onset]
+
+  suspension:
+    valence: 0.0
+    arousal: 0.4
+    body_focus: 0.3
+    brain_expectations:
+      regulation: high
+      interoception: moderate
+      core_affect: moderate
+    transition_affinity: [plateau]
+
+  threshold:
+    valence: 0.0
+    arousal: 0.5
+    body_focus: 0.4
+    brain_expectations:
+      interoception: moderate
+      core_affect: moderate
+      regulation: moderate
+    transition_affinity: [onset, reversal]
+
+  transformation:
+    valence: 0.2
+    arousal: 0.6
+    body_focus: 0.5
+    brain_expectations:
+      interoception: high
+      core_affect: high
+      memory: moderate
+    transition_affinity: [reversal, rapid_spike]
+
+  acceptance:
+    valence: 0.3
+    arousal: -0.3
+    body_focus: 0.4
+    brain_expectations:
+      interoception: moderate
+      regulation: declining
+      core_affect: declining
+    transition_affinity: [decline, plateau]
+
+  # ─── Intensity modifiers ───
+
+  overwhelm:
+    valence: -0.4
+    arousal: 0.9
+    body_focus: 0.8
+    brain_expectations:
+      interoception: very_high
+      core_affect: very_high
+      regulation: low
+      language: negative
+    transition_affinity: [rapid_spike, peak]
+
+  numbness:
+    valence: -0.2
+    arousal: -0.6
+    body_focus: -0.3
+    brain_expectations:
+      interoception: low
+      core_affect: low
+      regulation: high
+    transition_affinity: [plateau, decline]
+
+  intensity:
+    valence: 0.0
+    arousal: 0.8
+    body_focus: 0.5
+    brain_expectations:
+      core_affect: very_high
+      interoception: high
+    transition_affinity: [peak]
+
+  calm:
+    valence: 0.3
+    arousal: -0.5
+    body_focus: 0.1
+    brain_expectations:
+      regulation: moderate
+      core_affect: low
+      interoception: low
+    transition_affinity: [decline, plateau]
+
+  # ─── Action-oriented emotions ───
+
+  urgency:
+    valence: -0.2
+    arousal: 0.8
+    body_focus: 0.4
+    brain_expectations:
+      core_affect: high
+      regulation: high
+      reward: moderate
+    transition_affinity: [rapid_spike, onset]
+
+  determination:
+    valence: 0.3
+    arousal: 0.5
+    body_focus: 0.1
+    brain_expectations:
+      regulation: high
+      reward: high
+      core_affect: moderate
+    transition_affinity: [gradual_rise, plateau]
+
+  helplessness:
+    valence: -0.7
+    arousal: 0.2
+    body_focus: 0.5
+    brain_expectations:
+      regulation: low
+      core_affect: moderate
+      interoception: moderate
+      reward: negative
+    transition_affinity: [decline, plateau]
+
+  agency:
+    valence: 0.5
+    arousal: 0.5
+    body_focus: -0.2
+    brain_expectations:
+      regulation: high
+      reward: high
+      language: moderate
+    transition_affinity: [onset, gradual_rise]
+
+  # ─── Existential emotions ───
+
+  meaning:
+    valence: 0.5
+    arousal: 0.3
+    body_focus: 0.3
+    brain_expectations:
+      memory: moderate
+      reward: moderate
+      core_affect: moderate
+      interoception: moderate
+    transition_affinity: [gradual_rise, plateau]
+
+  absurdity:
+    valence: -0.2
+    arousal: 0.4
+    body_focus: -0.3
+    brain_expectations:
+      language: high
+      core_affect: moderate
+      regulation: declining
+    transition_affinity: [rapid_spike, reversal]
+
+  weight:
+    valence: -0.3
+    arousal: 0.2
+    body_focus: 0.7
+    brain_expectations:
+      interoception: high
+      core_affect: moderate
+      regulation: moderate
+    transition_affinity: [gradual_rise, plateau]
+
+  lightness:
+    valence: 0.5
+    arousal: 0.1
+    body_focus: 0.3
+    brain_expectations:
+      interoception: declining
+      regulation: declining
+      reward: moderate
+    transition_affinity: [decline, reversal]
+
+# ─── Activation level thresholds ───
+# Used by the mapping rules to classify brain activations
+
+thresholds:
+  very_high: 0.35
+  high: 0.25
+  moderate: 0.15
+  low: 0.10
+  negative: -0.05
