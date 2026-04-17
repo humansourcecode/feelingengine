@@ -347,36 +347,47 @@ class BrainToEmotionMapper:
         self, timesteps: list[TimestepEmotion]
     ) -> list[dict]:
         """Condense the full timestep list into narrative arc segments."""
-        if not timesteps:
-            return []
+        return build_arc_summary(timesteps)
 
-        segments = []
-        current_top_term = None
-        segment_start = None
 
-        for te in timesteps:
-            if not te.primary:
-                continue
+def build_arc_summary(timesteps: list["TimestepEmotion"]) -> list[dict]:
+    """Condense a timestep list into narrative arc segments.
 
-            top_term = te.primary[0].term
+    Groups consecutive timesteps sharing the same top-ranked emotion into
+    a single segment. Uses whatever is currently in `te.primary[0].term`,
+    so callers can run this again after Layer 4 refinement to get a
+    Layer-4-aware summary.
+    """
+    if not timesteps:
+        return []
 
-            if top_term != current_top_term:
-                if current_top_term is not None:
-                    segments.append({
-                        "start_timestep": segment_start,
-                        "end_timestep": te.timestep - 1,
-                        "dominant_emotion": current_top_term,
-                        "is_change_point": te.is_change_point,
-                    })
-                current_top_term = top_term
-                segment_start = te.timestep
+    segments = []
+    current_top_term = None
+    segment_start = None
 
-        if current_top_term is not None:
-            segments.append({
-                "start_timestep": segment_start,
-                "end_timestep": timesteps[-1].timestep,
-                "dominant_emotion": current_top_term,
-                "is_change_point": False,
-            })
+    for te in timesteps:
+        if not te.primary:
+            continue
 
-        return segments
+        top_term = te.primary[0].term
+
+        if top_term != current_top_term:
+            if current_top_term is not None:
+                segments.append({
+                    "start_timestep": segment_start,
+                    "end_timestep": te.timestep - 1,
+                    "dominant_emotion": current_top_term,
+                    "is_change_point": te.is_change_point,
+                })
+            current_top_term = top_term
+            segment_start = te.timestep
+
+    if current_top_term is not None:
+        segments.append({
+            "start_timestep": segment_start,
+            "end_timestep": timesteps[-1].timestep,
+            "dominant_emotion": current_top_term,
+            "is_change_point": False,
+        })
+
+    return segments

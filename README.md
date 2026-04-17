@@ -43,11 +43,17 @@ Plus Fire, a cross-domain matcher that surfaces precedents in other media with t
 ```bash
 git clone https://github.com/humansourcecode/feelingengine
 cd feelingengine
-pip install numpy pyyaml anthropic modal elevenlabs  # core
-# torch — only needed if you run TRIBE locally instead of via Modal
-```
 
-Proper packaging (`pyproject.toml`) is on the roadmap. Until then, install dependencies directly.
+# Core install
+pip install -e .
+
+# With optional providers (install what you need)
+pip install -e ".[all]"       # ElevenLabs + Modal + Anthropic
+pip install -e ".[tts]"       # ElevenLabs only
+pip install -e ".[llm]"       # Anthropic only
+pip install -e ".[compute]"   # Modal only
+pip install -e ".[dev]"       # pytest + coverage
+```
 
 Copy `.env.example` to `.env` and fill in the keys you'll use. You do **not** need all of them — only the ones corresponding to the entry points you want:
 
@@ -166,13 +172,17 @@ You can still build commercial products on the Translator + Fire layers (Layers 
 
 ## What's Tested
 
-- ✅ **Mode 1 end-to-end** — profile load → change detection → Layers 2/3/5 → Fire matcher, verified against Jobs Stanford data (2026-04-17)
-- ✅ Layer 4 synthesis with Claude Sonnet 4.6 (separate run)
+- ✅ **Full pipeline end-to-end** — text → ElevenLabs → Modal TRIBE → Translator (Layers 2/3/4/5) → Fire, verified 2026-04-17
+- ✅ **22-test pytest suite** covering change detection, Layer 3 mapping, confidence scoring, Fire matcher, vocabulary, Mode 1 pipeline
 - ✅ Fire matcher + sample corpus (8 entries, 6 domains)
-- ⚠️ **Modes 2–3 (live Modal + ElevenLabs)** — adapter code written, not yet run end-to-end against production APIs
-- ⚠️ No pytest suite yet — coming with the packaging work
+- ✅ Layer 4 synthesis with Claude Sonnet 4.6
 
-See `examples/analyze_speech.py` for the canonical usage.
+```bash
+pytest                  # 22 unit tests, no external calls
+pytest --run-e2e        # 3 more E2E tests, costs ~$0.05 per run
+```
+
+See `examples/analyze_speech.py` for the canonical usage and `tests/README.md` for test conventions.
 
 ---
 

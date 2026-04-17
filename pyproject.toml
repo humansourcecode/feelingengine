@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "feeling-engine"
+version = "0.1.0"
+description = "Brain-response-grounded emotional analysis pipeline."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Landon Fears", email = "landon@feelingengineer.com" },
+]
+keywords = [
+    "neuroscience",
+    "emotion-recognition",
+    "brain-prediction",
+    "tribe",
+    "content-analysis",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+llm = ["anthropic>=0.25"]
+gemini = ["google-generativeai>=0.7"]
+tts = ["elevenlabs>=1.0"]
+compute = ["modal>=0.60"]
+all = [
+    "anthropic>=0.25",
+    "elevenlabs>=1.0",
+    "modal>=0.60",
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/humansourcecode/feelingengine"
+Repository = "https://github.com/humansourcecode/feelingengine"
+Issues = "https://github.com/humansourcecode/feelingengine/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["feeling_engine*"]
+exclude = ["tests*", "examples*", "docs*"]
+
+[tool.setuptools.package-data]
+feeling_engine = [
+    "translator/vocabulary.yaml",
+    "fire/corpus/sample/*.yaml",
+]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "e2e: tests that hit live external APIs (ElevenLabs, Modal, Anthropic). Costs money. Skipped unless --run-e2e.",
+]
+addopts = [
+    "-ra",
+    "--strict-markers",
+]

@@ -143,6 +143,7 @@ def main():
         from feeling_engine.translator.llm_synthesizer import (
             LLMSynthesizer, ContextProfile,
         )
+        from feeling_engine.translator.brain_to_emotion import build_arc_summary
         synth = LLMSynthesizer()
 
         context = None
@@ -168,6 +169,9 @@ def main():
                     )
                     for sl in result.refined_labels[:5]
                 ] if te.primary else []
+
+        # Recompute arc summary so it reflects Layer 4 refined labels
+        arc.arc_summary = build_arc_summary(arc.timesteps)
 
     # ── Output ──
     if args.json:

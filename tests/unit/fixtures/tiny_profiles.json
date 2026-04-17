@@ -1,0 +1,122 @@
+[
+  {
+    "timestep": 0,
+    "categories": {
+      "core_affect": 0.0554,
+      "interoception": 0.0585,
+      "regulation": 0.0624,
+      "social": -0.2015,
+      "reward": -0.0107,
+      "memory": -0.1162,
+      "language": -0.0471
+    }
+  },
+  {
+    "timestep": 1,
+    "categories": {
+      "core_affect": 0.0771,
+      "interoception": 0.134,
+      "regulation": 0.0843,
+      "social": -0.1764,
+      "reward": 0.0115,
+      "memory": -0.0642,
+      "language": -0.0844
+    }
+  },
+  {
+    "timestep": 2,
+    "categories": {
+      "core_affect": 0.0099,
+      "interoception": 0.0449,
+      "regulation": 0.0693,
+      "social": 0.1011,
+      "reward": -0.0267,
+      "memory": -0.0397,
+      "language": 0.2215
+    }
+  },
+  {
+    "timestep": 3,
+    "categories": {
+      "core_affect": 0.0398,
+      "interoception": 0.0872,
+      "regulation": 0.1273,
+      "social": 0.1537,
+      "reward": -0.0119,
+      "memory": -0.0499,
+      "language": 0.2582
+    }
+  },
+  {
+    "timestep": 4,
+    "categories": {
+      "core_affect": 0.0467,
+      "interoception": 0.116,
+      "regulation": 0.1225,
+      "social": 0.1135,
+      "reward": 0.0067,
+      "memory": -0.0146,
+      "language": 0.1375
+    }
+  },
+  {
+    "timestep": 5,
+    "categories": {
+      "core_affect": 0.0097,
+      "interoception": 0.0779,
+      "regulation": 0.0673,
+      "social": 0.0103,
+      "reward": 0.0173,
+      "memory": -0.0482,
+      "language": 0.0586
+    }
+  },
+  {
+    "timestep": 6,
+    "categories": {
+      "core_affect": 0.0423,
+      "interoception": 0.0816,
+      "regulation": 0.067,
+      "social": -0.1232,
+      "reward": 0.0349,
+      "memory": -0.0238,
+      "language": 0.0113
+    }
+  },
+  {
+    "timestep": 7,
+    "categories": {
+      "core_affect": -0.0321,
+      "interoception": 0.0009,
+      "regulation": 0.0198,
+      "social": -0.0392,
+      "reward": 0.0156,
+      "memory": -0.1031,
+      "language": 0.0337
+    }
+  },
+  {
+    "timestep": 8,
+    "categories": {
+      "core_affect": 0.0971,
+      "interoception": 0.0811,
+      "regulation": 0.1366,
+      "social": -0.0103,
+      "reward": 0.1033,
+      "memory": 0.0389,
+      "language": 0.0864
+    }
+  },
+  {
+    "timestep": 9,
+    "categories": {
+      "core_affect": -0.0101,
+      "interoception": -0.0257,
+      "regulation": 0.0429,
+      "social": -0.0188,
+      "reward": 0.0628,
+      "memory": -0.1045,
+      "language": 0.0254
+    }
+  }
+]
