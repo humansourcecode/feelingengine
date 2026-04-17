@@ -67,6 +67,10 @@ def main():
                              "Run --list-voices to see options. "
                              "Gender, age, and register should match your content's speaker — "
                              "mismatched voices produce worse TRIBE predictions.")
+    parser.add_argument("--tts-output",
+                        default=None,
+                        help="Where to save the synthesized MP3 (--text mode). "
+                             "Defaults to alongside the input text file.")
     parser.add_argument("--content", "-c", help="Content text at the key moment (for Layer 4)")
     parser.add_argument("--context", help="Viewer context description (for Layer 4)")
     parser.add_argument("--top-k", type=int, default=5, help="Number of Fire matches")
@@ -116,7 +120,14 @@ def main():
             print("  No --voice-id provided; using default narrator (Rachel). "
                   "Run --list-voices to pick a voice that matches your content.")
         text = Path(args.text).read_text()
-        tts_result = tts.synthesize(text, Path("/tmp/feeling_engine_tts.mp3"))
+        if args.tts_output:
+            tts_out_path = Path(args.tts_output)
+        else:
+            # Default: write next to the input text file
+            tts_out_path = Path(args.text).with_suffix(".mp3")
+        tts_out_path.parent.mkdir(parents=True, exist_ok=True)
+        tts_result = tts.synthesize(text, tts_out_path)
+        print(f"  TTS saved: {tts_out_path} ({tts_result.duration_seconds:.1f}s)")
 
         print(f"Running TRIBE on synthesized audio ({tts_result.duration_seconds:.1f}s)...")
         compute = ModalTRIBEAdapter()
