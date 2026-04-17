@@ -1,5 +1,9 @@
 # Feeling Engine
 
+[![Tests](https://github.com/humansourcecode/feelingengine/actions/workflows/test.yml/badge.svg)](https://github.com/humansourcecode/feelingengine/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python: 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](pyproject.toml)
+
 **A brain-response-grounded emotional analysis pipeline.**
 
 Feeling Engine takes content (audio, text, or pre-computed brain predictions) and produces a timestep-by-timestep emotional arc — not guessed from surface sentiment, but derived from predicted brain activation patterns via Meta FAIR's [TRIBE v2](https://github.com/facebookresearch/tribev2) model.
@@ -260,6 +264,27 @@ Follow: [@humancodebase](https://x.com/humancodebase) · [@feelingengineer](http
 - **Fire corpus (sample)** — 8 public-domain / widely-cited excerpts for demonstration
 
 ---
+
+## Development
+
+Running the test suite locally:
+
+```bash
+pip install -e ".[dev]"
+python -m pytest tests/unit              # 22 unit tests, ~0.5s, no API calls
+python -m pytest tests/e2e --run-e2e     # 3 live-API tests, ~$0.05 per run
+```
+
+**Isolated reproducibility check** — verifies the repo installs and passes tests from a clean environment, not your local one:
+
+```bash
+docker build -t feeling-engine-test .
+docker run --rm feeling-engine-test python -m pytest tests/unit
+```
+
+The Dockerfile installs only what the README tells users to install, so a successful build is evidence that the install instructions actually work on a machine that isn't yours.
+
+**CI** (GitHub Actions) runs unit tests + Mode 1 smoke test on every push and PR across a matrix of Python 3.10/3.11/3.12 × Ubuntu/macOS, plus a package-build check. See [`.github/workflows/test.yml`](.github/workflows/test.yml).
 
 ## Contributing
 

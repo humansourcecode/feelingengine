@@ -1,0 +1,15 @@
+# Don't leak local state into the Docker build context.
+.git
+.venv
+.env
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info
+.DS_Store
+tests/*/output/
