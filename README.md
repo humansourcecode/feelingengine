@@ -71,14 +71,24 @@ Available extras: `[tts]` (ElevenLabs), `[llm]` (Anthropic), `[gemini]` (Google)
 
 ### 3. Smoke test — zero API keys needed
 
+The simplest sanity check — works with just the core install:
+
 ```bash
-pytest tests/unit                           # 22 unit tests
 python examples/analyze_speech.py \
   --profiles tests/unit/fixtures/tiny_profiles.json \
   --no-layer4
 ```
 
-If both work, your install is correct. Neither needs any API keys or external services.
+If that prints an emotional arc and cross-domain matches, your install is correct. No API keys or external services used.
+
+**To also run the test suite** (requires `[dev]` extras):
+
+```bash
+pip install -e ".[dev]"
+python -m pytest tests/unit                 # 22 unit tests
+```
+
+Use `python -m pytest` (not bare `pytest`) to guarantee it runs against your venv's Python, not a globally-installed pytest.
 
 ### 4. Configure API keys (only for paid features)
 
