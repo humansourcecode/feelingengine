@@ -76,8 +76,16 @@ python examples/analyze_speech.py --audio speech.mp3
 ### Mode 3 — Text (requires ElevenLabs + Modal)
 
 ```bash
-python examples/analyze_speech.py --text speech.txt
+# 1. List your ElevenLabs voices to find one that matches your content's speaker
+python examples/analyze_speech.py --list-voices
+
+# 2. Analyze with a voice that fits (gender, age, register)
+python examples/analyze_speech.py --text speech.txt --voice-id <voice_id>
 ```
+
+**Why the voice choice matters:** TRIBE predicts brain activation from *audio features* (timbre, prosody, pace), not just words. A dramatic male political speech synthesized in a neutral female narrator voice produces a brain prediction for that narrator reading the text — not for the original delivery. Match the voice to the intended speaker for meaningful results.
+
+**Better yet: if real audio of the content exists, skip TTS entirely — use `--audio` on the original recording.**
 
 ### Add context for Layer 4 refinement
 

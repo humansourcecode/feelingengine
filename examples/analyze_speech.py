@@ -57,7 +57,16 @@ def main():
         "--text", "-t",
         help="Path to text file (requires ElevenLabs + Modal)",
     )
+    input_group.add_argument(
+        "--list-voices", action="store_true",
+        help="List ElevenLabs voices in your account and exit (helps pick --voice-id)",
+    )
 
+    parser.add_argument("--voice-id",
+                        help="ElevenLabs voice ID to use for --text mode. "
+                             "Run --list-voices to see options. "
+                             "Gender, age, and register should match your content's speaker — "
+                             "mismatched voices produce worse TRIBE predictions.")
     parser.add_argument("--content", "-c", help="Content text at the key moment (for Layer 4)")
     parser.add_argument("--context", help="Viewer context description (for Layer 4)")
     parser.add_argument("--top-k", type=int, default=5, help="Number of Fire matches")
@@ -68,6 +77,11 @@ def main():
     parser.add_argument("--no-layer4", action="store_true", help="Skip LLM refinement")
 
     args = parser.parse_args()
+
+    # ── Voice listing mode ──
+    if args.list_voices:
+        _print_voice_list()
+        return
 
     # ── Pipeline setup ──
     pipeline = FeelingPipeline(brain_adapter=TRIBEv2Adapter())
@@ -95,7 +109,12 @@ def main():
         from feeling_engine.adapters.tts.elevenlabs import ElevenLabsAdapter
         from feeling_engine.adapters.compute.modal_tribe import ModalTRIBEAdapter
 
-        tts = ElevenLabsAdapter()
+        tts = ElevenLabsAdapter(voice_id=args.voice_id)
+        if args.voice_id:
+            print(f"  Using voice_id: {args.voice_id}")
+        else:
+            print("  No --voice-id provided; using default narrator (Rachel). "
+                  "Run --list-voices to pick a voice that matches your content.")
         text = Path(args.text).read_text()
         tts_result = tts.synthesize(text, Path("/tmp/feeling_engine_tts.mp3"))
 
@@ -162,6 +181,45 @@ def main():
             print()
             matches = matcher.match_arc(arc, top_k=args.top_k)
             print(matcher.format_matches(matches))
+
+
+def _print_voice_list():
+    """Print the user's ElevenLabs voice library for --voice-id selection."""
+    from feeling_engine.adapters.tts.elevenlabs import ElevenLabsAdapter
+
+    try:
+        adapter = ElevenLabsAdapter()
+    except RuntimeError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    voices = adapter.list_voices()
+
+    if not voices:
+        print("No voices found in your ElevenLabs account.")
+        return
+
+    # Group by category for readability
+    by_category: dict[str, list] = {}
+    for v in voices:
+        by_category.setdefault(v.category, []).append(v)
+
+    print(f"\n{len(voices)} voices in your ElevenLabs account")
+    print("=" * 72)
+
+    for category in sorted(by_category):
+        print(f"\n── {category} ──")
+        for v in sorted(by_category[category], key=lambda x: x.name.lower()):
+            print(f"  {v.name}")
+            print(f"    voice_id: {v.voice_id}")
+            if v.description:
+                desc = v.description if len(v.description) <= 80 else v.description[:77] + "..."
+                print(f"    {desc}")
+
+    print("\n" + "=" * 72)
+    print("Use with:  --text speech.txt --voice-id <voice_id>")
+    print("Tip: match gender, age, and register to your content's speaker for")
+    print("     better TRIBE predictions.")
 
 
 if __name__ == "__main__":

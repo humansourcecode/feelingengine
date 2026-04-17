@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from feeling_engine.adapters.tts.base import TTSAdapter, TTSResult
+from feeling_engine.adapters.tts.base import TTSAdapter, TTSResult, VoiceInfo
 
 
 # Voice settings optimized for TRIBE accuracy.
@@ -236,8 +236,13 @@ class ElevenLabsAdapter(TTSAdapter):
 
         return result, timing_words
 
-    def list_voices(self) -> list[dict]:
-        """List available voices in the user's ElevenLabs account."""
+    def list_voices(self) -> list[VoiceInfo]:
+        """List available voices in the user's ElevenLabs account.
+
+        Returns VoiceInfo objects with labels (gender, age, accent, use_case)
+        when ElevenLabs provides them — these help users pick a voice that
+        matches their content.
+        """
         try:
             from elevenlabs import ElevenLabs
         except ImportError:
@@ -246,15 +251,23 @@ class ElevenLabsAdapter(TTSAdapter):
         client = ElevenLabs(api_key=self._api_key)
         voices = client.voices.get_all()
 
-        return [
-            {
-                "voice_id": v.voice_id,
-                "name": v.name,
-                "category": getattr(v, "category", "unknown"),
-                "description": getattr(v, "description", ""),
-            }
-            for v in voices.voices
-        ]
+        results = []
+        for v in voices.voices:
+            labels = getattr(v, "labels", None) or {}
+            # Build a compact description from labels if native description is missing
+            native_desc = getattr(v, "description", "") or ""
+            if not native_desc and labels:
+                parts = [f"{k}: {val}" for k, val in labels.items() if val]
+                native_desc = ", ".join(parts)
+
+            results.append(VoiceInfo(
+                voice_id=v.voice_id,
+                name=v.name,
+                category=getattr(v, "category", "unknown") or "unknown",
+                description=native_desc,
+                labels=dict(labels) if labels else None,
+            ))
+        return results
 
     @property
     def provider_name(self) -> str:

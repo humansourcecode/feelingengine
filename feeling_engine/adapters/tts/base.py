@@ -23,6 +23,16 @@ class TTSResult:
     provider: str = "unknown"
 
 
+@dataclass
+class VoiceInfo:
+    """Provider-agnostic voice metadata for user selection."""
+    voice_id: str
+    name: str
+    category: str = "unknown"   # e.g., premade, cloned, professional
+    description: str = ""       # free-text descriptor (gender, age, style)
+    labels: dict | None = None  # provider-specific tags (gender, accent, etc.)
+
+
 class TTSAdapter(ABC):
     """Interface for TTS providers. Implement for each provider."""
 
@@ -42,6 +52,15 @@ class TTSAdapter(ABC):
 
         Returns:
             TTSResult with audio file path and metadata
+        """
+
+    @abstractmethod
+    def list_voices(self) -> list[VoiceInfo]:
+        """Return voices available in the user's account for this provider.
+
+        Lets users pick a voice that matches their content (gender, age,
+        register, style). Mismatched voices produce lower-quality TRIBE
+        predictions — choose the closest match to the intended speaker.
         """
 
     @property
