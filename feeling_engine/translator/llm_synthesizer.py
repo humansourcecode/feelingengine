@@ -371,10 +371,10 @@ Respond in this exact JSON format:
     @staticmethod
     def _default_model(provider: str) -> str:
         defaults = {
-            "anthropic": "claude-sonnet-4-20250514",
+            "anthropic": "claude-sonnet-4-6",
             "google": "gemini-2.0-flash",
         }
-        return defaults.get(provider, "claude-sonnet-4-20250514")
+        return defaults.get(provider, "claude-sonnet-4-6")
 
     @staticmethod
     def _load_vocabulary_terms(path: Path) -> list[str]:
