@@ -238,4 +238,10 @@ def _print_voice_list():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (ImportError, RuntimeError, FileNotFoundError) as e:
+        # Expected CLI-level failure modes — missing deps, missing env keys,
+        # missing files. Print cleanly without the full traceback.
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
