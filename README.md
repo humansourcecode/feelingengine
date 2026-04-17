@@ -139,6 +139,8 @@ Five layers, loosely coupled:
 - **Adapters are swappable.** TRIBE v2 today, other brain models tomorrow; Modal today, local GPU or another provider tomorrow; ElevenLabs today, any TTS tomorrow.
 - **Every emotion label is brain-grounded.** The 60-term vocabulary has explicit region expectations (interoception high, language suppressed, etc.) — labels only fire when the brain pattern supports them.
 
+For the full methodology — why the 7 brain-region categories, how dimensional mapping grounds the vocabulary, what this pipeline does NOT do — see [`docs/methodology.md`](docs/methodology.md).
+
 ---
 
 ## Costs (verified 2026-04-16)
