@@ -30,12 +30,14 @@ class ModalTRIBEAdapter(ComputeAdapter):
     """Runs TRIBE v2 on Modal's serverless GPU infrastructure.
 
     This adapter calls the `predict_brain` function deployed on Modal
-    via tribe_modal.py. The function runs on an A100-40GB GPU and
+    via deploy/tribe_modal.py. The function runs on an A100-40GB GPU and
     returns vertex-level predictions + emotional profiles.
 
     The Modal function must be deployed before use:
-        cd <path-to-tribe-tools>
-        modal deploy tribe_modal.py
+        modal setup                              # one-time auth
+        modal deploy deploy/tribe_modal.py       # ~10 min first time
+
+    See deploy/README.md for the full deployment procedure.
     """
 
     def __init__(

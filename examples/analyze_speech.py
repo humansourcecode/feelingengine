@@ -4,7 +4,7 @@
 This demonstrates the full pipeline:
     TRIBE brain data → Translator → Fire cross-domain matching
 
-Three modes:
+Three input modes:
     1. From pre-computed TRIBE profiles (JSON) — no GPU needed
     2. From audio file via Modal GPU — requires Modal deployment
     3. From text via ElevenLabs TTS → Modal GPU — requires both services
@@ -17,15 +17,24 @@ Usage:
     python examples/analyze_speech.py --audio speech.mp3
 
     # Mode 3: Text → ElevenLabs → TRIBE → Translator → Fire
-    python examples/analyze_speech.py --text speech.txt
+    #   (first run --list-voices to pick a voice that fits your content)
+    python examples/analyze_speech.py --list-voices
+    python examples/analyze_speech.py --text speech.txt --voice-id <id>
 
-    # Add content context for Layer 4 refinement
+    # Add content + viewer context for Layer 4 refinement
     python examples/analyze_speech.py --profiles profiles.json \\
         --content "No one wants to die..." \\
         --context "Viewer knows Jobs died in 2011"
 
+    # Write the synthesized MP3 somewhere specific (Mode 3)
+    python examples/analyze_speech.py --text speech.txt \\
+        --voice-id <id> --tts-output out/speech.mp3
+
     # Output as JSON
     python examples/analyze_speech.py --profiles profiles.json --json
+
+    # Skip Fire matching or Layer 4 to reduce cost/time
+    python examples/analyze_speech.py --profiles profiles.json --no-fire --no-layer4
 """
 import argparse
 import json
