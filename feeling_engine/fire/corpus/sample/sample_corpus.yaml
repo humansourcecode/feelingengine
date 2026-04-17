@@ -1,0 +1,63 @@
+# Sample corpus for Feeling Engine — 8 entries across 6 domains.
+# Each entry has a title, domain, feelings arc, and excerpt.
+#
+# This is the FREE sample included with the open-source repo.
+# Full corpus (38+ entries across 10 domains) available separately.
+
+entries:
+
+  - id: jobs_stanford_death_pivot
+    title: "Steve Jobs — Stanford Commencement (Death Pivot)"
+    domain: speeches
+    feelings: [composure, persuasion, clarity, threshold, mortality_awareness, body_response, weight, reverence, resolve]
+    excerpt: "No one wants to die. Even people who want to go to heaven don't want to die to get there. And yet, death is the destination we all share."
+    context: "2005 Stanford commencement. Jobs had been diagnosed with cancer."
+
+  - id: soldier_last_letter
+    title: "Sullivan Ballou — Last Letter to Wife (Civil War)"
+    domain: letters
+    feelings: [tenderness, longing, anticipation, dread, mortality_awareness, acceptance, love, weight, resolve]
+    excerpt: "If the dead can come back to this earth and flit unseen around those they loved, I shall always be near you."
+    context: "Written one week before the Battle of Bull Run, 1861. Ballou was killed in the battle."
+
+  - id: marcus_aurelius_meditations
+    title: "Marcus Aurelius — Meditations, Book II"
+    domain: philosophy
+    feelings: [composure, clarity, mortality_awareness, acceptance, resolve, meaning, calm]
+    excerpt: "Think of yourself as dead. You have lived your life. Now, take what's left and live it properly."
+    context: "Written ~170-180 CE as private journal entries, never intended for publication."
+
+  - id: keats_ode_nightingale
+    title: "John Keats — Ode to a Nightingale"
+    domain: poetry
+    feelings: [longing, numbness, desire, wonder, threshold, mortality_awareness, bittersweet, acceptance]
+    excerpt: "Darkling I listen; and, for many a time I have been half in love with easeful Death."
+    context: "Written 1819, two years before Keats died of tuberculosis at age 25."
+
+  - id: challenger_classroom
+    title: "Challenger Disaster — Classroom Reaction"
+    domain: news
+    feelings: [anticipation, wonder, confusion, dread, overwhelm, grief, numbness, helplessness]
+    excerpt: "The teacher's face went from excitement to confusion to horror in about three seconds."
+    context: "January 28, 1986. Christa McAuliffe was the first teacher selected for spaceflight."
+
+  - id: diamond_is_forever
+    title: "De Beers — 'A Diamond Is Forever' Campaign"
+    domain: advertising
+    feelings: [desire, anticipation, tenderness, meaning, satisfaction, pride]
+    excerpt: "A diamond is forever."
+    context: "Created by copywriter Frances Gerety in 1947. Transformed the diamond industry."
+
+  - id: father_son_porch
+    title: "Father and Son on the Porch (Original Script)"
+    domain: scripts
+    feelings: [composure, suspension, tenderness, vulnerability, weight, acceptance, release]
+    excerpt: "A man sits his father's chair on the porch stairs. His father assembles, comes out."
+    context: "Original screenplay fragment exploring intergenerational silence and presence."
+
+  - id: first_day_school
+    title: "First Day of School (Viral Video)"
+    domain: viral
+    feelings: [anticipation, vulnerability, determination, pride, tenderness, bittersweet, release]
+    excerpt: "The mother's face as she watches her child walk through the school doors for the first time."
+    context: "Viral video genre. Parent POV of child's milestone — universally resonant."
