@@ -182,15 +182,26 @@ class BrainToEmotionMapper:
             arc_summary=arc_summary,
         )
 
+    # Brain activations are typically in [-0.3, +0.5] range.
+    # Vocabulary dimensions are in [-1, +1] range.
+    # Scale factor normalizes brain-derived dimensions to vocabulary scale.
+    DIMENSION_SCALE = 3.5
+
     def _compute_dimensions(self, categories: dict[str, float]) -> dict:
-        """Project brain activations into dimensional emotion space."""
+        """Project brain activations into dimensional emotion space.
+
+        Brain activations are small values (typically ±0.3). Vocabulary
+        terms use a [-1, +1] scale. We scale brain-derived dimensions
+        to match, so dimensional distance scoring works correctly.
+        """
         dims = {}
         for dim_name, weights in self.DIMENSION_WEIGHTS.items():
-            value = sum(
+            raw = sum(
                 categories.get(cat, 0.0) * weight
                 for cat, weight in weights.items()
             )
-            dims[dim_name] = round(value, 4)
+            scaled = max(-1.0, min(1.0, raw * self.DIMENSION_SCALE))
+            dims[dim_name] = round(scaled, 4)
         return dims
 
     def _score_all_terms(
