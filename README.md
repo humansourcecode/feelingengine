@@ -40,28 +40,75 @@ Plus Fire, a cross-domain matcher that surfaces precedents in other media with t
 
 ## Installation
 
+### 1. System dependencies
+
+```bash
+# macOS
+brew install ffmpeg python@3.11
+
+# Ubuntu / Debian
+apt install ffmpeg python3.11-venv
+```
+
+Feeling Engine uses `ffprobe` (shipped with ffmpeg) for audio duration. Python 3.10+ required.
+
+### 2. Install the package
+
 ```bash
 git clone https://github.com/humansourcecode/feelingengine
 cd feelingengine
 
-# Core install
+python -m venv .venv && source .venv/bin/activate
+
+# Core install (Mode 1 only — offline profile analysis)
 pip install -e .
 
-# With optional providers (install what you need)
-pip install -e ".[all]"       # ElevenLabs + Modal + Anthropic
-pip install -e ".[tts]"       # ElevenLabs only
-pip install -e ".[llm]"       # Anthropic only
-pip install -e ".[compute]"   # Modal only
-pip install -e ".[dev]"       # pytest + coverage
+# Recommended — installs all optional provider SDKs
+pip install -e ".[all,dev]"
 ```
 
-Copy `.env.example` to `.env` and fill in the keys you'll use. You do **not** need all of them — only the ones corresponding to the entry points you want:
+Available extras: `[tts]` (ElevenLabs), `[llm]` (Anthropic), `[gemini]` (Google), `[compute]` (Modal), `[all]` (everything), `[dev]` (pytest + coverage).
 
-| Entry point | Keys needed |
+### 3. Smoke test — zero API keys needed
+
+```bash
+pytest tests/unit                           # 22 unit tests
+python examples/analyze_speech.py \
+  --profiles tests/unit/fixtures/tiny_profiles.json \
+  --no-layer4
+```
+
+If both work, your install is correct. Neither needs any API keys or external services.
+
+### 4. Configure API keys (only for paid features)
+
+```bash
+cp .env.example .env
+# Edit .env — fill in ONLY the keys for features you want
+```
+
+You don't need all keys. Each entry point has its own minimum:
+
+| Entry point | Keys required |
 |---|---|
-| Pre-computed TRIBE profiles (JSON) | `ANTHROPIC_API_KEY` (for Layer 4, optional) |
-| Audio file → TRIBE | `MODAL_TOKEN_ID/SECRET`, `HUGGINGFACE_ACCESS_TOKEN` |
-| Text → TTS → TRIBE | above + `ELEVENLABS_API_KEY` |
+| Pre-computed TRIBE profiles (`--profiles`) | None |
+| Pre-computed profiles + Layer 4 refinement | `ANTHROPIC_API_KEY` |
+| Audio file → TRIBE (`--audio`) | `MODAL_TOKEN_ID/SECRET`, `HUGGINGFACE_ACCESS_TOKEN` |
+| Text → TTS → TRIBE (`--text`) | All of the above + `ELEVENLABS_API_KEY` |
+
+Running a mode without the required keys produces a clear error pointing you at the missing key. Nothing will crash cryptically.
+
+### 5. Deploy TRIBE to Modal (required for `--audio` and `--text` modes)
+
+TRIBE v2 model weights are gated on HuggingFace — [request access](https://huggingface.co/facebook/tribev2), then:
+
+```bash
+modal setup                              # one-time Modal auth
+export HUGGINGFACE_ACCESS_TOKEN=hf_...   # your token
+modal deploy deploy/tribe_modal.py       # first deploy takes ~10 min
+```
+
+See [`deploy/README.md`](deploy/README.md) for details, costs, and teardown.
 
 ---
 
