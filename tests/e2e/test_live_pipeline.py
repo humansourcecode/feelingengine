@@ -37,6 +37,15 @@ def _require_env(*keys):
         pytest.skip(f"Missing env var(s): {', '.join(missing)}")
 
 
+def _require_modal_auth():
+    """Modal auth can come from env vars OR ~/.modal.toml (via `modal setup`)."""
+    if os.getenv("MODAL_TOKEN_ID") and os.getenv("MODAL_TOKEN_SECRET"):
+        return
+    config = Path.home() / ".modal.toml"
+    if not config.exists():
+        pytest.skip("Modal not authenticated: run `modal setup` or set MODAL_TOKEN_ID/SECRET")
+
+
 def test_elevenlabs_synthesize_short(tmp_path):
     """ElevenLabs → MP3 file with non-zero duration."""
     _require_env("ELEVENLABS_API_KEY")
@@ -67,12 +76,8 @@ def test_list_voices_returns_library():
 
 def test_full_text_to_arc_pipeline(tmp_path):
     """End-to-end: text → TTS → Modal TRIBE → Translator → Fire."""
-    _require_env(
-        "ELEVENLABS_API_KEY",
-        "MODAL_TOKEN_ID",
-        "MODAL_TOKEN_SECRET",
-        "HUGGINGFACE_ACCESS_TOKEN",
-    )
+    _require_env("ELEVENLABS_API_KEY")
+    _require_modal_auth()
     from feeling_engine.adapters.tts.elevenlabs import ElevenLabsAdapter
     from feeling_engine.adapters.compute.modal_tribe import ModalTRIBEAdapter
     from feeling_engine.adapters.brain_model.tribev2 import TRIBEv2Adapter
