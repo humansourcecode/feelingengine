@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Feeling Engine Inspector</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="header">
+    <div class="brand">
+      <span class="logo">⌬</span>
+      <span class="title">Feeling Engine · Inspector</span>
+    </div>
+    <div class="controls">
+      <label for="arc-select">Arc:</label>
+      <select id="arc-select" aria-label="Select an arc to inspect">
+        <option value="steve_jobs_death_pivot">Steve Jobs — Stanford Death Pivot (60s excerpt)</option>
+        <option value="pastmorph_evolution_of_homes">@PastMorph — Evolution of Homes (visual/music, 4m45)</option>
+        <option value="iceberger_bloods_rank">@Iceberger99 — Bloods Rank (POV narrative, 7m29)</option>
+        <option value="corporate_playbook_90_day_trap">@the_corporateplaybook — 90 Day Trap (speech, 9m24)</option>
+      </select>
+      <label class="mode-toggle">
+        <input type="checkbox" id="mode-sigma" checked>
+        σ-mode
+      </label>
+      <label class="mode-toggle">
+        <input type="checkbox" id="show-hemispheres" checked>
+        Hemispheres
+      </label>
+    </div>
+  </header>
+
+  <section class="meta" id="meta"></section>
+
+  <section class="timeline-section brain-row">
+    <div class="brain-chart-col">
+      <h2>Brain activity (7 HCP categories)</h2>
+      <div class="legend" id="brain-legend"></div>
+      <svg id="brain-timeline" class="timeline-svg" aria-label="Brain activity timeline"></svg>
+    </div>
+    <div class="hemi-col" id="hemi-card">
+      <div class="hemi-wrap" id="hemi-wrap">
+        <div class="hemi"><img id="hemi-left" alt="left hemisphere"><div class="hemi-label">left</div></div>
+        <div class="hemi"><img id="hemi-right" alt="right hemisphere"><div class="hemi-label">right</div></div>
+      </div>
+      <div class="hemi-placeholder" id="hemi-placeholder" hidden>
+        Hemisphere renders not yet available for this arc. Re-mine with raw predictions to enable.
+      </div>
+    </div>
+  </section>
+
+  <section class="timeline-section">
+    <h2>Mechanisms firing</h2>
+    <div class="mech-info" id="mech-info"></div>
+    <svg id="mech-timeline" class="timeline-svg" aria-label="Mechanism timeline"></svg>
+  </section>
+
+  <section class="detail-section">
+    <h2>At this moment</h2>
+    <div class="detail-grid">
+      <div class="detail-card">
+        <h3>Brain state</h3>
+        <ul id="brain-state" class="kv"></ul>
+      </div>
+      <div class="detail-card">
+        <h3>Mechanisms firing</h3>
+        <ul id="firing-mechs" class="firing-list"></ul>
+      </div>
+      <div class="detail-card">
+        <h3>Transcript</h3>
+        <div id="transcript-word" class="transcript-word">—</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>
+      Each arc is mechanism-form on top of TRIBE v2 brain predictions.
+      σ-mode normalizes detector thresholds against each video's own signal distribution, so quieter content (visual, music, no-dialogue) fires comparably to speech-heavy content.
+      See <a href="../arcs/README.md">examples/arcs/README.md</a> for the bundled data format.
+    </p>
+  </footer>
+
+</div>
+
+<!-- Sticky playback controls — always visible -->
+<div class="scrubber-bar" id="scrubber-bar">
+  <button id="play-btn" class="play-btn" aria-label="Play">▶</button>
+  <input type="range" id="scrubber" min="0" max="100" value="0" step="1">
+  <select id="speed-select" class="speed-select" aria-label="Playback speed">
+    <option value="0.5">0.5×</option>
+    <option value="1" selected>1×</option>
+    <option value="2">2×</option>
+    <option value="4">4×</option>
+  </select>
+  <span class="scrubber-readout" id="scrubber-readout">t=0s</span>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

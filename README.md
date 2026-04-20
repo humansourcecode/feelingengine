@@ -3,12 +3,20 @@
 [![Tests](https://github.com/humansourcecode/feelingengine/actions/workflows/test.yml/badge.svg)](https://github.com/humansourcecode/feelingengine/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](pyproject.toml)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/humansourcecode/feelingengine/blob/main/examples/colab/feeling_engine_demo.ipynb)
 
-**A brain-response-grounded emotional analysis pipeline.**
+**A brain-response-grounded pipeline for analyzing content by its mechanisms, not its topic.**
 
-Feeling Engine takes content (audio, text, or pre-computed brain predictions) and produces a timestep-by-timestep emotional arc — not guessed from surface sentiment, but derived from predicted brain activation patterns via Meta FAIR's [TRIBE v2](https://github.com/facebookresearch/tribev2) model.
+Feeling Engine takes content (audio, text, video, or pre-computed brain predictions) and produces three layered outputs:
 
-It answers the question: **"What does this content feel like to a listener, moment by moment — and why?"**
+1. **A timestep-by-timestep emotional arc** — derived from predicted brain activation patterns via Meta FAIR's [TRIBE v2](https://github.com/facebookresearch/tribev2), not guessed from surface sentiment.
+2. **Mechanism detection** — 28 content-agnostic labels (body-turn, pattern-break, vulnerability-transfer, drift, …) that fire when brain-response patterns match their signatures. Works across genres, mediums, and durations.
+3. **Arc mining** — build a library of mechanism-arcs from outlier content you want to learn from. Each arc lives in vocabulary form (shareable, topic-independent) and can be matched across disjoint mediums.
+
+It answers two questions that most content analysis tools can't:
+
+- **"What does this content feel like to a listener, moment by moment — and why?"**
+- **"What other content, regardless of topic or medium, produces the same structural journey?"**
 
 > Alpha. Interfaces are stable enough to use. Expect sharp edges.
 
@@ -84,6 +92,8 @@ python examples/analyze_speech.py \
 ```
 
 If that prints an emotional arc and cross-domain matches, your install is correct. No API keys or external services used.
+
+**Prefer to try it without installing?** Open the [**Colab notebook**](https://colab.research.google.com/github/humansourcecode/feelingengine/blob/main/examples/colab/feeling_engine_demo.ipynb) — runs the interpretation pipeline end-to-end on four pre-mined arcs (speech, POV narrative, visual/music, adversarial explainer). Zero setup; no HF tokens, no Modal account.
 
 **To also run the test suite** (requires `[dev]` extras):
 
@@ -180,9 +190,60 @@ print(matcher.format_matches(matches))
 
 ---
 
+## Mechanism Detection
+
+Beyond the 60-term emotional vocabulary, Feeling Engine detects **mechanisms** — content-agnostic structural moves (body-turn, pattern-break, vulnerability-transfer, drift, recognition, …). A mechanism fires when brain-response patterns match its signature. 28 mechanisms ship in v1, with 10 named narrative sequences (joke-structure, intimacy-deepening, contemplation-spiral, …) composed from them.
+
+```python
+from feeling_engine.mechanisms.api import detect_mechanisms, detect_sequences
+from feeling_engine.mechanisms.tier1_detectors import compute_axis_stats
+
+# Load or generate TRIBE profiles first, then:
+axis_stats = compute_axis_stats(profiles)  # per-video normalization stats
+arc = detect_mechanisms(
+    tribe_categories=profiles,
+    transcript=transcript,
+    axis_stats=axis_stats,   # enables σ-mode (see below)
+)
+sequences = detect_sequences(arc)
+```
+
+### Two threshold modes
+
+- **Absolute (default):** thresholds are raw magnitudes, tuned against a speech-heavy baseline. Predictable, but under-fires on quieter content types (music/visual).
+- **σ-mode (pass `axis_stats=...`):** thresholds are interpreted as standard-deviation multipliers relative to *this video's own* signal distribution. Content-agnostic by construction; on a silent-video corpus it unlocks 10× more firings vs. absolute. Faithful port of absolute defaults via Jobs-baseline calibration — existing content's output is preserved within ~2%. See `docs/mechanism_labels.md` and `docs/detector_validation.md`.
+
+Full mechanism vocabulary, TRIBE signatures, and cross-domain exemplars: [`docs/mechanism_labels.md`](docs/mechanism_labels.md).
+
+---
+
+## Arc Mining
+
+Feeding Feeling Engine a URL builds an **arc library** — a collection of mechanism-form arcs extracted from outlier content. Arcs are:
+
+- **Topic-independent** — stored in the shared 28-label vocabulary, not tied to the source's subject matter
+- **Medium-agnostic** — the same arc shape can describe a 5-second video, a 2-hour film, a song, or a podcast
+- **Commercial-safe** — derived from (CC BY-NC) TRIBE output but the arcs themselves are vocabulary-form (your IP)
+
+```bash
+# Mine one URL
+python -m feeling_engine.mining.arc_miner mine <YouTube URL> \
+  --db arc_library.db --niche "architecture-history" --channel-median 1840000
+
+# Mine a batch from a TSV
+python -m feeling_engine.mining.arc_miner mine-batch seeds.tsv --db arc_library.db
+
+# List the library
+python -m feeling_engine.mining.arc_miner list --db arc_library.db
+```
+
+Both absolute and σ-mode arcs are stored per entry, so downstream consumers can match by either. See [`examples/arcs/`](examples/arcs/) for three pre-mined bundles across disparate content types (visual/music, POV narrative, speech-heavy explainer) — useful as fixtures for testing, prototyping, or running the demo notebook without a Modal account.
+
+---
+
 ## Architecture
 
-Five layers, loosely coupled:
+Five translator layers plus two downstream modules, loosely coupled:
 
 | Layer | Role | File |
 |---|---|---|
@@ -191,8 +252,9 @@ Five layers, loosely coupled:
 | **3** — Dimensional mapping | Maps brain state → valence/arousal/body-focus → 60-term emotional vocabulary | `translator/brain_to_emotion.py` + `vocabulary.yaml` |
 | **4** — LLM synthesis | Claude/Gemini refines labels using the actual content + optional viewer context | `translator/llm_synthesizer.py` |
 | **5** — Confidence | HIGH / MODERATE / LOW / SPECULATIVE scoring based on brain-grounding strength | `translator/confidence.py` |
-
-**Fire matcher** (`fire/matcher.py`) runs on top of the output arc: cosine + Levenshtein similarity against a corpus of pre-annotated media to find cross-domain precedents.
+| **Mechanisms** | 28-label + 10-sequence mechanism detection on top of brain predictions, with σ-mode normalization | `mechanisms/` |
+| **Mining** | URL → TRIBE → mechanism arc → sqlite arc library | `mining/arc_miner.py` |
+| **Fire matcher** | Cross-domain precedent matching against a corpus of pre-annotated media | `fire/matcher.py` |
 
 ### Design principles
 
@@ -236,9 +298,10 @@ You can still build commercial products on the Translator + Fire layers (Layers 
 ## What's Tested
 
 - ✅ **Full pipeline end-to-end** — text → ElevenLabs → Modal TRIBE → Translator (Layers 2/3/4/5) → Fire, verified 2026-04-17
-- ✅ **22-test pytest suite** covering change detection, Layer 3 mapping, confidence scoring, Fire matcher, vocabulary, Mode 1 pipeline
+- ✅ **26-test pytest suite** covering change detection, Layer 3 mapping, confidence scoring, Fire matcher, vocabulary, Mode 1 pipeline, and tier1 mechanism detectors (abs + σ mode parity + faithful-port)
 - ✅ Fire matcher + sample corpus (8 entries, 6 domains)
 - ✅ Layer 4 synthesis with Claude Sonnet 4.6
+- ✅ Arc miner end-to-end: 3 YouTube videos trimodally mined on Modal, both threshold modes stored
 
 ```bash
 pytest                  # 22 unit tests, no external calls

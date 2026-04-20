@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Landon Fears", email = "landon@feelingengineer.com" },
+    { name = "Landon Fears", email = "hi@feelingengineer.com" },
 ]
 keywords = [
     "neuroscience",
@@ -71,6 +71,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 markers = [
     "e2e: tests that hit live external APIs (ElevenLabs, Modal, Anthropic). Costs money. Skipped unless --run-e2e.",
+    "modal: tests that hit the deployed Modal TRIBE function. Costs ~$0.03-0.05 per run. Skipped unless --run-modal.",
 ]
 addopts = [
     "-ra",

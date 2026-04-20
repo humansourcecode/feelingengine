@@ -12,3 +12,8 @@ All infrastructure is pluggable via adapters. You provide your own API keys.
 """
 
 __version__ = "0.1.0"
+
+# Public surface
+from feeling_engine.voice_picker import pick_voice, VoiceChoice  # noqa: E402
+
+__all__ = ["pick_voice", "VoiceChoice"]

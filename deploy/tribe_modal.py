@@ -53,13 +53,29 @@ tribe_image = (
     .run_commands(
         # Download NLTK data
         "python3 -c \"import nltk; nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True)\"",
-        # Patch TRIBE to use whisperx directly (not uvx)
+        # Patch TRIBE to use whisperx directly (not uvx) and force float32
+        # compute type — subprocess GPU visibility for whisperx can flake on
+        # Modal and the ctranslate2 fp16 check rejects, killing the whole run.
         "TRIBE_PATH=$(python3 -c 'import tribev2, os; print(os.path.dirname(tribev2.__file__))') && "
-        "sed -i 's/\"uvx\",//' ${TRIBE_PATH}/eventstransforms.py",
+        "sed -i 's/\"uvx\",//' ${TRIBE_PATH}/eventstransforms.py && "
+        "sed -i 's/compute_type = \"float16\"/compute_type = \"float32\"/' ${TRIBE_PATH}/eventstransforms.py",
     )
     .add_local_file(
         str(Path(__file__).parent / "brain_regions.py"),
         "/root/brain_regions.py",
+        copy=True,
+    )
+    # HCP-MMP parcellation files — figshare blocks Modal's egress (HTTP 403),
+    # so we bundle them in the image. MNE's fetch_hcp_mmp_parcellation skips
+    # download if the files already exist at the expected SUBJECTS_DIR path.
+    .add_local_file(
+        str(Path(__file__).parent / "hcp_mmp_data" / "lh.HCPMMP1.annot"),
+        "/root/hcp_mmp_data/lh.HCPMMP1.annot",
+        copy=True,
+    )
+    .add_local_file(
+        str(Path(__file__).parent / "hcp_mmp_data" / "rh.HCPMMP1.annot"),
+        "/root/hcp_mmp_data/rh.HCPMMP1.annot",
         copy=True,
     )
 )
@@ -74,19 +90,30 @@ model_cache = modal.Volume.from_name("tribe-model-cache", create_if_missing=True
 # ─── GPU Function: Predict ────────────────────────────────────
 
 @app.function(
-    gpu="A100-40GB",
-    timeout=1800,
+    gpu="A100-80GB",
+    timeout=7200,
     volumes={"/cache": model_cache},
     secrets=[modal.Secret.from_name("huggingface-token")],
 )
-def predict_brain(audio_bytes: bytes, filename: str) -> dict:
-    """Run TRIBE prediction on audio bytes. Returns prediction + profiles."""
+def predict_brain(content_bytes: bytes, filename: str) -> dict:
+    """Run TRIBE prediction on content (video/audio/text). Returns prediction + profiles.
+
+    Modality is routed by file extension:
+      .mp4/.mov/.webm/.mkv → video_path (full trimodal: vision + audio + text)
+      .mp3/.wav/.m4a/.flac/.ogg → audio_path (audio + text transcript)
+      other → text_path (converted to speech internally)
+
+    A100-80GB selected: trimodal needs ≥40GB VRAM per TRIBE docs;
+    80GB gives headroom. Empirically A100 is faster than H100 for
+    this workload (see KB Ref #25).
+    """
     import warnings
     warnings.filterwarnings("ignore")
     import logging
     logging.disable(logging.WARNING)
 
     import time
+    from pathlib import Path
     import numpy as np
     import torch
 
@@ -96,19 +123,49 @@ def predict_brain(audio_bytes: bytes, filename: str) -> dict:
     from huggingface_hub import login
     login(token=os.environ["HF_TOKEN"], add_to_git_credential=False)
 
-    # Save audio to temp file
-    audio_path = f"/tmp/{filename}"
-    with open(audio_path, "wb") as f:
-        f.write(audio_bytes)
+    # Stage bundled HCP-MMP parcellation files to MNE's expected location.
+    # Avoids the figshare-403 network issue on Modal egress.
+    import shutil
+    import mne
+    mne_subjects_dir = (
+        mne.get_config("SUBJECTS_DIR")
+        or os.environ.get("SUBJECTS_DIR")
+        or os.path.expanduser("~/mne_data/MNE-fsaverage-data")
+    )
+    os.environ["SUBJECTS_DIR"] = mne_subjects_dir
+    hcp_dest = os.path.join(mne_subjects_dir, "fsaverage", "label")
+    os.makedirs(hcp_dest, exist_ok=True)
+    for hemi in ("lh", "rh"):
+        src = f"/root/hcp_mmp_data/{hemi}.HCPMMP1.annot"
+        dst = os.path.join(hcp_dest, f"{hemi}.HCPMMP1.annot")
+        if os.path.exists(src) and not os.path.exists(dst):
+            shutil.copy(src, dst)
+
+    # Save content to temp file
+    content_path = f"/tmp/{filename}"
+    with open(content_path, "wb") as f:
+        f.write(content_bytes)
+
+    ext = Path(filename).suffix.lower()
+    VIDEO_EXTS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
+    AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac"}
 
     # Load model
     from tribev2 import TribeModel
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = TribeModel.from_pretrained("facebook/tribev2", device=device)
 
-    # Run prediction
+    # Route by modality
     start = time.time()
-    events = model.get_events_dataframe(audio_path=audio_path)
+    if ext in VIDEO_EXTS:
+        modality = "video"
+        events = model.get_events_dataframe(video_path=content_path)
+    elif ext in AUDIO_EXTS:
+        modality = "audio"
+        events = model.get_events_dataframe(audio_path=content_path)
+    else:
+        modality = "text"
+        events = model.get_events_dataframe(text_path=content_path)
     event_time = time.time() - start
 
     pred_start = time.time()
@@ -174,6 +231,7 @@ def predict_brain(audio_bytes: bytes, filename: str) -> dict:
         "prediction_shape": list(predictions.shape),
         "prediction_dtype": str(predictions.dtype),
         "profiles": profiles,
+        "modality": modality,
         "peak_timestep": peak_t,
         "peak_profile": {
             cat: round(data["mean_activation"], 4)

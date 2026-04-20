@@ -58,11 +58,17 @@ class ModalTRIBEAdapter(ComputeAdapter):
         self._function_name = function_name
         self._tribe_tools_path = tribe_tools_path
 
-    def predict(self, audio_bytes: bytes, filename: str) -> BrainPrediction:
-        """Run TRIBE brain prediction on audio content via Modal GPU.
+    def predict(self, content_bytes: bytes, filename: str) -> BrainPrediction:
+        """Run TRIBE brain prediction on content (video/audio/text) via Modal GPU.
+
+        Modality is routed by file extension on the Modal side:
+          .mp4/.mov/.webm/.mkv → trimodal (vision + audio + text)
+          .mp3/.wav/.m4a/.flac → audio + text transcript
+          other → text (converted to speech internally)
 
         Args:
-            audio_bytes: raw audio file bytes (MP3, WAV, etc.)
+            content_bytes: raw file bytes (MP4 preferred for YouTube;
+                MP3/WAV for audio-native content)
             filename: original filename for format detection
 
         Returns:
@@ -81,9 +87,9 @@ class ModalTRIBEAdapter(ComputeAdapter):
             self._app_name, self._function_name
         )
 
-        # Call Modal (sends audio to cloud GPU, waits for result)
+        # Call Modal (sends content to cloud GPU, waits for result)
         start = time.time()
-        result = predict_fn.remote(audio_bytes, filename)
+        result = predict_fn.remote(content_bytes, filename)
         runtime = time.time() - start
 
         # Extract predictions from Modal's response format
@@ -127,19 +133,19 @@ class ModalTRIBEAdapter(ComputeAdapter):
             model_name="TRIBE v2",
             metadata={
                 "profiles": result.get("profiles", []),
+                "modality": result.get("modality"),
                 "peak_timestep": result.get("peak_timestep"),
                 "modal_app": self._app_name,
             },
         )
 
-    def predict_from_file(self, audio_path: str | Path) -> BrainPrediction:
-        """Convenience: predict from a local audio file path."""
-        path = Path(audio_path)
+    def predict_from_file(self, content_path: str | Path) -> BrainPrediction:
+        """Convenience: predict from a local file path (video/audio/text)."""
+        path = Path(content_path)
         if not path.exists():
-            raise FileNotFoundError(f"Audio file not found: {path}")
+            raise FileNotFoundError(f"Content file not found: {path}")
 
-        audio_bytes = path.read_bytes()
-        return self.predict(audio_bytes, path.name)
+        return self.predict(path.read_bytes(), path.name)
 
     @property
     def provider_name(self) -> str:
