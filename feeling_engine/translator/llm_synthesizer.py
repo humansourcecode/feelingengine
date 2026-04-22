@@ -308,9 +308,12 @@ Respond in this exact JSON format:
             raise RuntimeError("GOOGLE_AI_API_KEY not set in environment")
 
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
+        from feeling_engine._gemini_retry import gemini_with_retry
+        response = gemini_with_retry(
+            client.models.generate_content,
             model=self.model,
             contents=[prompt],
+            verbose=False,
         )
         return response.text
 

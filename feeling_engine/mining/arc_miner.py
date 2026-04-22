@@ -122,6 +122,7 @@ def fetch_metadata(url: str) -> dict:
         "title": d.get("title"),
         "channel": d.get("channel") or d.get("uploader"),
         "channel_handle": handle,
+        "channel_url": d.get("channel_url") or d.get("uploader_url"),
         "channel_subs": int(d.get("channel_follower_count") or 0),
         "duration_sec": float(d.get("duration") or 0),
         "view_count": int(d.get("view_count") or 0),
@@ -129,6 +130,46 @@ def fetch_metadata(url: str) -> dict:
     }
     print(f" {(meta['title'] or '')[:60]}", flush=True)
     return meta
+
+
+def fetch_channel_median_views(
+    channel_url: str,
+    exclude_video_id: Optional[str] = None,
+) -> Optional[dict]:
+    """Compute a channel's median view count via yt-dlp --flat-playlist.
+
+    Single Innertube API call; no per-video page fetches. Typically 5-15s.
+    Returns {"median": int, "n_videos": int} or None on failure.
+    Excludes the currently-mining video from the median if its ID is provided,
+    so the outlier itself doesn't skew its own baseline.
+    """
+    import statistics
+    try:
+        result = subprocess.run(
+            ["yt-dlp", "--flat-playlist",
+             "--print", "%(id)s\t%(view_count)s",
+             "--no-download", channel_url],
+            capture_output=True, text=True, timeout=120,
+        )
+    except subprocess.TimeoutExpired:
+        return None
+    if result.returncode != 0:
+        return None
+    views = []
+    for line in result.stdout.strip().splitlines():
+        parts = line.split("\t")
+        if len(parts) != 2:
+            continue
+        vid, vc = parts
+        if exclude_video_id and vid == exclude_video_id:
+            continue
+        try:
+            views.append(int(vc))
+        except ValueError:
+            continue
+    if not views:
+        return None
+    return {"median": int(statistics.median(views)), "n_videos": len(views)}
 
 
 def download_video(url: str, out_dir: Path) -> Path:
@@ -306,41 +347,25 @@ def _load_cache(db_path: str, video_id: str) -> Optional[dict]:
     return None
 
 
-def mine_url(
-    url: str,
+def _mechanisms_and_write(
+    profiles: list,
+    transcript: Optional[dict],
+    modality: str,
     db_path: str,
-    niche: Optional[str] = None,
-    channel_median: Optional[float] = None,
+    url: str,
+    medium: str,
+    meta: dict,
+    niche: Optional[str],
+    channel_median: Optional[float],
 ) -> dict:
+    """Run mechanism + sequence detection on TRIBE profiles and write a row.
+
+    Shared core called by mine_url, mine_audio, mine_text. Contains the
+    vocabulary-only steps (Tier 1/2/3 detection + sequence detection +
+    normalization) + row construction + DB write. Source-specific ingestion
+    (yt-dlp / local-audio / text-synthesis) is the caller's responsibility.
+    """
     from feeling_engine.mechanisms.api import detect_mechanisms, detect_sequences
-
-    print(f"\n▶ Mining: {url}")
-    init_db(db_path)
-
-    # Fetch metadata first so we have video_id for cache lookup
-    meta = fetch_metadata(url)
-    video_id = meta.get("video_id") or url.rsplit("=", 1)[-1]
-
-    cached = _load_cache(db_path, video_id)
-    if cached:
-        print(f"  Cache hit for {video_id} — skipping yt-dlp + Modal")
-        profiles = cached["profiles"]
-        modality = cached.get("modality", "video")
-        transcript = cached.get("transcript")
-    else:
-        with tempfile.TemporaryDirectory() as tmp_str:
-            tmp = Path(tmp_str)
-            video = download_video(url, tmp)
-            transcript = fetch_transcript(url, tmp)
-            profiles, modality = run_tribe(video)
-        # Persist so a downstream failure doesn't cost another Modal call
-        _save_cache(db_path, video_id, {
-            "url": url, "video_id": video_id,
-            "profiles": profiles, "modality": modality,
-            "transcript": transcript, "meta": meta,
-        })
-        print(f"  Cached Modal result → arc_cache/{video_id}.json")
-
     from feeling_engine.mechanisms.tier1_detectors import compute_axis_stats
 
     print(f"  Detecting mechanisms (absolute)...", end="", flush=True)
@@ -359,23 +384,35 @@ def mine_url(
     sequences_sigma = detect_sequences(arc_sigma)
     print(f" abs={len(sequences_abs)} σ={len(sequences_sigma)}", flush=True)
 
-    normalized = normalize_arc(arc_abs, meta["duration_sec"])
+    duration_sec = float(meta.get("duration_sec") or 0.0)
+    normalized = normalize_arc(arc_abs, duration_sec)
 
+    view_count = meta.get("view_count")
     outlier_ratio = None
-    if channel_median and channel_median > 0:
-        outlier_ratio = round(meta["view_count"] / channel_median, 2)
+    if channel_median and channel_median > 0 and view_count:
+        outlier_ratio = round(view_count / channel_median, 2)
+
+    # Sanity check: a real outlier should beat its channel median.
+    # A ratio < 1.5 suggests either the content isn't actually an outlier
+    # or the stored channel_median is wrong (the failure mode Task #84 caught).
+    if outlier_ratio is not None and outlier_ratio < 1.5:
+        print(f"  ⚠  WARNING: outlier_ratio={outlier_ratio} is < 1.5 — "
+              f"this content appears to have UNDERPERFORMED its channel median "
+              f"({int(channel_median):,}). Either it's not an outlier, or "
+              f"channel_median_views is incorrect. Verify before trusting.",
+              flush=True)
 
     row = {
         "url": url,
-        "medium": "youtube_video",
+        "medium": medium,
         "modality": modality,
         "channel": meta.get("channel"),
         "channel_handle": meta.get("channel_handle"),
         "channel_subs": meta.get("channel_subs"),
         "title": meta.get("title"),
         "niche": niche,
-        "duration_sec": meta["duration_sec"],
-        "view_count": meta["view_count"],
+        "duration_sec": duration_sec,
+        "view_count": view_count,
         "channel_median_views": channel_median,
         "outlier_ratio": outlier_ratio,
         "pub_date": meta.get("pub_date"),
@@ -401,8 +438,277 @@ def mine_url(
         "id": rid, "url": url,
         "n_labels": len(arc_abs), "n_sequences": len(sequences_abs),
         "n_labels_sigma": len(arc_sigma), "n_sequences_sigma": len(sequences_sigma),
-        "duration_sec": meta["duration_sec"], "view_count": meta["view_count"],
+        "duration_sec": duration_sec, "view_count": view_count,
     }
+
+
+def mine_url(
+    url: str,
+    db_path: str,
+    niche: Optional[str] = None,
+    channel_median: Optional[float] = None,
+) -> dict:
+    """Mine a YouTube URL end-to-end: yt-dlp → Modal TRIBE → detect → write."""
+    print(f"\n▶ Mining: {url}")
+    init_db(db_path)
+
+    # Fetch metadata first so we have video_id for cache lookup
+    meta = fetch_metadata(url)
+    video_id = meta.get("video_id") or url.rsplit("=", 1)[-1]
+
+    # Live-compute channel median by default. Manual override via
+    # channel_median arg stays available for tests / deterministic replay.
+    if channel_median is None and meta.get("channel_url"):
+        print(f"  Computing channel median views (live)...", end="", flush=True)
+        result = fetch_channel_median_views(meta["channel_url"],
+                                            exclude_video_id=video_id)
+        if result:
+            channel_median = float(result["median"])
+            print(f" {int(channel_median):,} from {result['n_videos']} videos",
+                  flush=True)
+            if result["n_videos"] < 10:
+                print(f"  ⚠  Small catalog ({result['n_videos']} videos) — "
+                      f"median may be statistically fragile",
+                      flush=True)
+        else:
+            print(f" FAILED — no channel_median_views will be stored",
+                  flush=True)
+
+    cached = _load_cache(db_path, video_id)
+    if cached:
+        print(f"  Cache hit for {video_id} — skipping yt-dlp + Modal")
+        profiles = cached["profiles"]
+        modality = cached.get("modality", "video")
+        transcript = cached.get("transcript")
+    else:
+        with tempfile.TemporaryDirectory() as tmp_str:
+            tmp = Path(tmp_str)
+            video = download_video(url, tmp)
+            transcript = fetch_transcript(url, tmp)
+            profiles, modality = run_tribe(video)
+        # Persist so a downstream failure doesn't cost another Modal call
+        _save_cache(db_path, video_id, {
+            "url": url, "video_id": video_id,
+            "profiles": profiles, "modality": modality,
+            "transcript": transcript, "meta": meta,
+        })
+        print(f"  Cached Modal result → arc_cache/{video_id}.json")
+
+    return _mechanisms_and_write(
+        profiles=profiles, transcript=transcript, modality=modality,
+        db_path=db_path, url=url, medium="youtube_video",
+        meta=meta, niche=niche, channel_median=channel_median,
+    )
+
+
+def mine_audio(
+    audio_path,
+    db_path: str,
+    url: str,
+    meta: dict,
+    niche: Optional[str] = None,
+    channel_median: Optional[float] = None,
+    medium: str = "audio_upload",
+    transcript: Optional[dict] = None,
+) -> dict:
+    """Mine a local audio file: Modal TRIBE → detect → write.
+
+    Caller must supply `meta` (title, channel, duration_sec, etc.) — there's no
+    yt-dlp to fetch it. If duration_sec is missing, it's probed from the audio.
+    """
+    from pathlib import Path as _Path
+    audio_path = _Path(audio_path)
+    if not audio_path.exists():
+        raise FileNotFoundError(audio_path)
+
+    print(f"\n▶ Mining audio: {audio_path.name}")
+    init_db(db_path)
+
+    meta = dict(meta) if meta else {}
+    if not meta.get("duration_sec"):
+        try:
+            out = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                 "-of", "csv=p=0", str(audio_path)],
+                capture_output=True, text=True, timeout=30, check=True,
+            )
+            meta["duration_sec"] = float(out.stdout.strip())
+        except Exception:
+            meta["duration_sec"] = 0.0
+
+    profiles, modality = run_tribe(audio_path)
+    return _mechanisms_and_write(
+        profiles=profiles, transcript=transcript, modality=modality,
+        db_path=db_path, url=url, medium=medium,
+        meta=meta, niche=niche, channel_median=channel_median,
+    )
+
+
+ELEVENLABS_MAX_CHARS = 10000
+TTS_CHUNK_TARGET = 8000  # headroom under the ElevenLabs limit
+
+
+def _chunk_text_for_tts(text: str, target: int = TTS_CHUNK_TARGET) -> list:
+    """Split text into chunks ≤ target chars, respecting paragraph + sentence
+    boundaries. Never splits mid-sentence."""
+    import re as _re
+    paragraphs = text.split("\n\n")
+    chunks = []
+    buf = ""
+    for p in paragraphs:
+        p = p.strip()
+        if not p:
+            continue
+        if len(p) > target:
+            if buf:
+                chunks.append(buf.strip())
+                buf = ""
+            sentences = _re.split(r'(?<=[.!?])\s+', p)
+            sub = ""
+            for s in sentences:
+                if len(sub) + len(s) + 1 <= target:
+                    sub = (sub + " " + s).strip()
+                else:
+                    if sub:
+                        chunks.append(sub)
+                    sub = s
+            if sub:
+                chunks.append(sub)
+            continue
+        if len(buf) + len(p) + 2 <= target:
+            buf = (buf + "\n\n" + p).strip() if buf else p
+        else:
+            chunks.append(buf.strip())
+            buf = p
+    if buf:
+        chunks.append(buf.strip())
+    return chunks
+
+
+def text_to_audio(
+    text: str,
+    out_path,
+    voice_id: Optional[str] = None,
+    use_voice_picker: bool = True,
+) -> dict:
+    """Synthesize text → MP3 via ElevenLabs. Handles chunking + ffmpeg concat.
+
+    Returns {'audio_path': Path, 'voice_id': str, 'voice_name': str,
+    'rationale': str or None, 'duration_sec': float, 'n_chunks': int}.
+    """
+    from pathlib import Path as _Path
+    from feeling_engine.adapters.tts.elevenlabs import ElevenLabsAdapter
+
+    out_path = _Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    tts = ElevenLabsAdapter()
+
+    picker_info = {"name": None, "rationale": None, "method": "manual"}
+    if voice_id is None and use_voice_picker:
+        from feeling_engine.voice_picker import pick_voice
+        print(f"  Picking voice...", flush=True)
+        choice = pick_voice(text=text, tts_adapter=tts)
+        voice_id = choice.voice_id
+        picker_info = {"name": choice.name, "rationale": choice.rationale,
+                       "method": choice.method}
+        print(f"  Voice: {choice.name} ({choice.voice_id}) via {choice.method}",
+              flush=True)
+
+    chunks = _chunk_text_for_tts(text)
+    print(f"  Text: {len(text)} chars → {len(chunks)} chunk(s) "
+          f"(sizes: {[len(c) for c in chunks]})", flush=True)
+
+    if len(chunks) == 1:
+        tts.synthesize(text=chunks[0], output_path=str(out_path), voice_id=voice_id)
+    else:
+        chunks_dir = out_path.parent / (out_path.stem + "_chunks")
+        chunks_dir.mkdir(exist_ok=True)
+        chunk_paths = []
+        for i, ch in enumerate(chunks, 1):
+            p = chunks_dir / f"{out_path.stem}_chunk_{i:02d}.mp3"
+            print(f"    [{i}/{len(chunks)}] synthesizing {len(ch)} chars → {p.name}",
+                  flush=True)
+            tts.synthesize(text=ch, output_path=str(p), voice_id=voice_id)
+            chunk_paths.append(p)
+        concat_list = chunks_dir / "concat.txt"
+        concat_list.write_text("\n".join(f"file '{p}'" for p in chunk_paths))
+        print(f"  Concatenating {len(chunk_paths)} chunks via ffmpeg...", flush=True)
+        subprocess.run(
+            ["ffmpeg", "-y", "-f", "concat", "-safe", "0",
+             "-i", str(concat_list), "-c", "copy", str(out_path)],
+            check=True, capture_output=True,
+        )
+
+    # Probe duration
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "csv=p=0", str(out_path)],
+        capture_output=True, text=True, timeout=30,
+    )
+    duration_sec = float(probe.stdout.strip()) if probe.stdout.strip() else 0.0
+    size_mb = out_path.stat().st_size / 1e6
+    print(f"  Wrote {out_path.name} ({size_mb:.1f} MB, {duration_sec:.1f}s)",
+          flush=True)
+    return {
+        "audio_path": out_path,
+        "voice_id": voice_id,
+        "voice_name": picker_info["name"],
+        "rationale": picker_info["rationale"],
+        "picker_method": picker_info["method"],
+        "duration_sec": duration_sec,
+        "n_chunks": len(chunks),
+    }
+
+
+def mine_text(
+    text: str,
+    db_path: str,
+    url: str,
+    meta: dict,
+    niche: Optional[str] = None,
+    channel_median: Optional[float] = None,
+    voice_id: Optional[str] = None,
+    medium: str = "text_synthesized",
+    out_dir=None,
+) -> dict:
+    """Synthesize text → audio via ElevenLabs, then mine via Modal TRIBE.
+
+    If out_dir is provided, audio + chunks are persisted there; otherwise a
+    temp dir is used and cleaned up on exit. Adds `voice_id` / `voice_name`
+    to meta for later audit.
+    """
+    from pathlib import Path as _Path
+    print(f"\n▶ Mining text: {url}")
+    init_db(db_path)
+
+    if out_dir is not None:
+        out_dir = _Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        audio_path = out_dir / "synth.mp3"
+        synth = text_to_audio(text, audio_path, voice_id=voice_id)
+        # Fall through — audio persists on disk
+        meta_out = dict(meta) if meta else {}
+        meta_out["duration_sec"] = synth["duration_sec"]
+        meta_out["voice_id"] = synth["voice_id"]
+        meta_out["voice_name"] = synth["voice_name"]
+        return mine_audio(
+            audio_path=synth["audio_path"], db_path=db_path, url=url,
+            meta=meta_out, niche=niche, channel_median=channel_median,
+            medium=medium,
+        )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        audio_path = _Path(tmp) / "synth.mp3"
+        synth = text_to_audio(text, audio_path, voice_id=voice_id)
+        meta_out = dict(meta) if meta else {}
+        meta_out["duration_sec"] = synth["duration_sec"]
+        meta_out["voice_id"] = synth["voice_id"]
+        meta_out["voice_name"] = synth["voice_name"]
+        return mine_audio(
+            audio_path=synth["audio_path"], db_path=db_path, url=url,
+            meta=meta_out, niche=niche, channel_median=channel_median,
+            medium=medium,
+        )
 
 
 # ─── CLI ─────────────────────────────────────────────────────────
@@ -451,10 +757,52 @@ def main():
     b.add_argument("urls_file")
     b.add_argument("--db", default="arc_library.db")
 
+    ma = sub.add_parser(
+        "mine-audio",
+        help="Mine a local audio file (skips yt-dlp; caller supplies meta)",
+    )
+    ma.add_argument("audio_path")
+    ma.add_argument("--url", required=True,
+                    help="Source URL for the content (stored in row)")
+    ma.add_argument("--meta-json", required=True,
+                    help="JSON string or path to JSON with title/channel/"
+                         "channel_handle/pub_date/view_count")
+    ma.add_argument("--db", default="arc_library.db")
+    ma.add_argument("--niche")
+    ma.add_argument("--channel-median", type=float,
+                    help="Publication/channel median (views, restacks, etc.)")
+    ma.add_argument("--medium", default="audio_upload",
+                    help="Medium label (default: audio_upload)")
+
+    mt = sub.add_parser(
+        "mine-text",
+        help="Mine from text: ElevenLabs synthesize → Modal TRIBE → detect → write",
+    )
+    mt.add_argument("text_path")
+    mt.add_argument("--url", required=True,
+                    help="Source URL for the content")
+    mt.add_argument("--meta-json", required=True,
+                    help="JSON string or path to JSON with metadata")
+    mt.add_argument("--db", default="arc_library.db")
+    mt.add_argument("--niche")
+    mt.add_argument("--channel-median", type=float)
+    mt.add_argument("--voice-id",
+                    help="ElevenLabs voice ID (omit to use voice picker)")
+    mt.add_argument("--medium", default="text_synthesized")
+    mt.add_argument("--out-dir",
+                    help="Persist synthesized audio + chunks here "
+                         "(default: temp dir, cleaned up)")
+
     ls = sub.add_parser("list", help="List arcs in library")
     ls.add_argument("--db", default="arc_library.db")
 
     args = parser.parse_args()
+
+    def _parse_meta(s):
+        p = Path(s)
+        if p.exists():
+            return json.loads(p.read_text())
+        return json.loads(s)
 
     if args.cmd == "mine":
         mine_url(args.url, args.db,
@@ -474,6 +822,22 @@ def main():
                 mine_url(url, args.db, niche=niche, channel_median=median)
             except Exception as e:
                 print(f"  ✗ Failed {url}: {e}", file=sys.stderr)
+    elif args.cmd == "mine-audio":
+        meta = _parse_meta(args.meta_json)
+        mine_audio(
+            audio_path=args.audio_path, db_path=args.db, url=args.url,
+            meta=meta, niche=args.niche,
+            channel_median=args.channel_median, medium=args.medium,
+        )
+    elif args.cmd == "mine-text":
+        meta = _parse_meta(args.meta_json)
+        text = Path(args.text_path).read_text()
+        mine_text(
+            text=text, db_path=args.db, url=args.url, meta=meta,
+            niche=args.niche, channel_median=args.channel_median,
+            voice_id=args.voice_id, medium=args.medium,
+            out_dir=args.out_dir,
+        )
     elif args.cmd == "list":
         _cmd_list(args.db)
 
