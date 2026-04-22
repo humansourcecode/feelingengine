@@ -20,7 +20,8 @@ Then open `http://localhost:8080/inspector/`.
 
 ## What's in v1
 
-- Works with the three arc bundles in `examples/arcs/` (dropdown selector)
+- Works with the four bundled arcs in `examples/arcs/` (dropdown selector): Steve Jobs commencement, PastMorph wordless documentary, Iceberger POV narrative, Corporate Playbook adversarial explainer
+- Jobs bundle ships with pre-rendered brain hemisphere PNGs for all 60 timesteps
 - SVG timelines, pure vanilla JS, no build step
 - Scrubber-driven per-moment detail panel
 
