@@ -256,7 +256,7 @@ def _format_transcript_for_prompt(words: list) -> str:
 def _build_vocabulary_section() -> str:
     lines = []
     for spec in MECHANISM_LABELS:
-        exemplar_str = "; ".join(spec.exemplars) if spec.exemplars else ""
+        exemplar_str = "; ".join(str(e) for e in spec.exemplars) if spec.exemplars else ""
         lines.append(
             f"- **{spec.name}** (tier {spec.tier}): {spec.phenomenology}"
             + (f". Examples: {exemplar_str}" if exemplar_str else "")
